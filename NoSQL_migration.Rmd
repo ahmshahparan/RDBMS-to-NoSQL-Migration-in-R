@@ -1,0 +1,93 @@
+---
+title: "RDBMS to NoSQL migration"
+author: "A H M Shahparan"
+date: "4/29/2018"
+output: html_document
+---
+
+###Objectibe:
+The object of this assignment is to develop understanding of data storage and retrieval mechanism for a NoSQL database. For this conversion, I have chosen the SQL database of my own. Database ER diagram is illustrated below. Amongst the NoSQL database, I have chosen mongoDB for the migration.
+
+![ER Diagram: Banking DAtabase](/Users/ahmshahparan/Desktop/CDW_SAPP/ERDiagram.png)
+
+###Required Libraries:
+```{r}
+library(dplyr)
+
+# SQL Database Connector
+library(RMySQL)
+
+#Mongolite Database Connector
+library(mongolite)
+```
+
+###MySQL 
+Here we pull the data down from MySQL:
+```{r}
+mydb <- dbConnect(MySQL(), user='ahmshahparan', password='11223344', host='db4free.net')
+dbSendQuery(mydb, "USE ahmshahparan;")
+
+customers <- dbGetQuery(mydb, "SELECT * FROM CDW_SAPP_CUSTOMER;")
+branches <- dbGetQuery(mydb, "SELECT * FROM CDW_SAPP_BRANCH;")
+transactions <- dbGetQuery(mydb, "SELECT * FROM CDW_SAPP_CREDITCARD;")
+
+#Disconnect and detach RMySQL to prevent masking of functions below
+dbDisconnect(mydb)
+detach("package:RMySQL", unload=TRUE)
+```
+Data can be also downloaded from [here](https://github.com/ahmshahparan/SQL-to-NoSQL-Migration-in-R/tree/master/MySQL-Database).
+
+###MongoDB
+Once we pull the movie ratings from mySQL, we connect to a MongoDB, and use the count() function to make sure the database is empty.
+```{r}
+customersNoSQL <- mongo(collection = 'CDW_SAPP_CUSTOMER', db = 'ahmshahparan', url = "mongodb://ahmshahparan:11223344@ds263619.mlab.com:63619/ahmshahparan")
+
+branchesNoSQL <- mongo(collection = 'CDW_SAPP_BRANCH', db = 'ahmshahparan', url = "mongodb://ahmshahparan:11223344@ds263619.mlab.com:63619/ahmshahparan")
+
+transactionsNoSQL <- mongo(collection = 'CDW_SAPP_CREDITCARD', db = 'ahmshahparan', url = "mongodb://ahmshahparan:11223344@ds263619.mlab.com:63619/ahmshahparan")
+
+customersNoSQL$count("{}")
+branchesNoSQL$count("{}")
+transactionsNoSQL$count("{}")
+```
+
+###Data Migration
+From here we insert the ratings table into Mongo and run a count() to make sure the data was uploaded.
+```{r}
+customersNoSQL$insert(customers)
+branchesNoSQL$insert(branches)
+transactionsNoSQL$insert(transactions)
+
+customersNoSQL$count("{}")
+branchesNoSQL$count("{}")
+transactionsNoSQL$count("{}")
+```
+The data is successfully migrated and can be queried now.
+
+
+###Cleanup
+Drop the created tables from Mongo if needed and the connection through mongolite automatically disconnects when the connection is removed.
+```{r}
+customersNoSQL$drop()
+branchesNoSQL$drop()
+transactionsNoSQL$drop()
+
+customersNoSQL$count("{}")
+branchesNoSQL$count("{}")
+transactionsNoSQL$count("{}")
+
+rm(customersNoSQL)
+rm(branchesNoSQL)
+rm(transactionsNoSQL)
+```
+
+###Comparison
+* SQL databases are table based databases whereas NoSQL databases are document based, key-value pairs, graph databases or wide-column stores. This means that SQL databases represent data in form of tables which consists of n number of rows of data whereas NoSQL databases are the collection of key-value pair, documents, graph databases or wide-column stores which do not have standard schema definitions which it needs to adhered to.
+
+* NoSQL uses documents that have flexible schema. Each instance can have a fluid number of named schemas, for example, customers can be set up without having to change the schema.
+
+* NoSQL allows easy migration of data because of the easy and flexible schema. No-SQL databases such as MongoDB also scale better and have higher performance compared to SQL databases.
+
+* A disadvantage that I see over SQL databases is that it is harder to view the data in its entirety. We are so used to seeing data in a tabular form. We cannot directly see what the table looks like in its column names, typical values, etc. 
+
+* Overall the conversion process was smooth. The more difficult part was to identify proper database storage method (SQL vs. NoSQL) and proper database structure.
